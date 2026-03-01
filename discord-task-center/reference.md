@@ -163,3 +163,97 @@
   ```
   具体 config 路径以你的 `openclaw.json` 中 Discord 集成配置为准。
 - **Agent 指令**：SKILL.md 正文是写给 OpenClaw agent 的指令（何时触发、如何响应新建/归档、模型标签的含义）；本 reference 供实现工具/插件或排查 API 时查阅。
+
+---
+
+## 10. 六部管理频道模板（司礼监 + 吏户礼兵刑工）
+
+在「任务中心」单论坛之上，可选用**明朝六部式**整站管理结构：**司礼监 (main)** 为调度中枢，其下为**吏、户、礼、兵、刑、工**六部，每部对应一个 Discord 类别（Category），其下为若干频道（文本/公告/论坛）。
+
+### 10.1 六部与 Discord 映射
+
+| 机构 | Discord 职能 | 模板中类别名 |
+|------|--------------|--------------|
+| 司礼监 (main) | 调度中枢 | 司礼监 (main) · 调度中枢 |
+| 吏部 | 成员与人事 | 吏部 · 成员与人事 |
+| 户部 | 资源与财政 | 户部 · 资源与财政 |
+| 礼部 | 礼仪与对外 | 礼部 · 礼仪与对外 |
+| 兵部 | 安全与风控 | 兵部 · 安全与风控 |
+| 刑部 | 规则与裁决 | 刑部 · 规则与裁决 |
+| 工部 | 建设与运维 | 工部 · 建设与运维（含任务中心论坛） |
+
+### 10.2 模板 JSON 结构
+
+模板文件位于本 skill 目录下（路径相对于 skill 根目录，即 `discord-task-center/`）：
+
+- **完整版**：`templates/six-ministries.json`
+- **精简版**：`templates/six-ministries-minimal.json`（司礼监 1 频道 + 每部 1 文本频道 + 工部任务中心）
+
+实现时若从工作区根目录解析路径，则应为 `discord-task-center/templates/six-ministries.json`（或当前 skill 目录名 + `/templates/...`）。
+
+**根字段**：
+
+- `version`：模板版本，如 `"1.0"`。
+- `description`：说明创建顺序与用途。
+- `categories`：数组，**第一项为司礼监**，其后为吏→户→礼→兵→刑→工。
+
+**每个 category 对象**：
+
+- `id`：可选，便于脚本引用。
+- `name`：类别名称（创建 Discord 类别时使用，type=4）。
+- `channels`：该类别下频道数组。
+
+**每个 channel 对象**：
+
+- `name`：频道名，1–100 字符。
+- `type`：Discord 频道类型。`0` = GUILD_TEXT（文本），`5` = GUILD_NEWS（公告），`15` = GUILD_FORUM（论坛）。
+- `topic`：可选，0–4096 字符（论坛/公告等支持 topic 的类型）。
+- `available_tags`：仅论坛（type=15）需要。数组，每项 `{ "name": "标签名", "moderated": true }` 可选。每论坛最多 20 个标签，每帖最多 5 个（见上文第 5 节）。
+
+### 10.3 创建顺序与权限
+
+1. **顺序**：先建**司礼监 (main)** 类别及该类别下所有频道，再按**吏→户→礼→兵→刑→工**依次建各类别及其下频道。
+2. **每个类别**：先 `POST /channels` 创建**类别**（`type: 4`，`name` 为 category.name），取得返回的 `id` 作为 `parent_id`。
+3. **每个频道**：再 `POST /channels` 创建该类别下频道，传 `parent_id` 为上一步的类别 ID，`type`、`name`、`topic`（若有）、`available_tags`（仅论坛）按模板填写。
+4. **权限**：Bot 需具备 `MANAGE_CHANNELS`。若某论坛标签设为 `moderated: true`，仅具 MANAGE_THREADS 权限者可添加/移除该标签。
+
+若当前使用的 Discord 工具不支持按 `parent_id` 建子频道或一次只支持建一个频道，则按上述顺序循环调用 `channelCreate`，并在回复中汇总新建的类别与频道 ID/链接。
+
+---
+
+## 11. 多 Agent 协作协议（上朝 / 上奏 / 回传 / 巡检）
+
+司礼监与六部可各由独立 Agent 代理。以下约定**消息格式与流向**，便于调度器与各 Agent 实现对接。实现时需运行时具备多 Agent 调度、定时任务与（可选）司礼监与各部之间的消息总线或 API。
+
+### 11.1 配置项建议
+
+在配置中可增加 `court`（或 `agents`）段，例如：
+
+- `court.schedule`：上朝时间，如 `"08:00"`。
+- `court.timezone`：时区，如 `"Asia/Shanghai"`。
+- `court.reportChannelId`：司礼监汇总报告输出目标（Discord 频道 ID 或 webhook URL）。
+- `court.inspection`：可选，司礼监 heartbeat 巡检六部时的指标与阈值（用于异常判定）。
+- 各部的 agent 标识/端点：用于司礼监回传指令与状态拉取。
+
+### 11.2 上朝（每日 8:00）
+
+- **触发**：定时任务，每日 8:00（按 `court.timezone`）。
+- **各部 → 司礼监**：每个部 Agent 上报 `{ "ministry": "吏部"|"户部"|... , "completed_last_night": [...], "plan_today": [...], "nothing": false }`；无事项时 `nothing: true`，可省略 completed/plan。
+- **司礼监 → 用户**：汇总六部为「朝会报告」，输出到 `court.reportChannelId` 或约定位置；格式可为 Markdown 或结构化 JSON，含各部昨夜完成与今日计划。
+
+### 11.3 上奏（Heartbeat）
+
+- **触发**：各 Agent 心跳时。
+- **各部 → 司礼监**：若有进展，上报 `{ "ministry": "...", "progress": "进展摘要", "updated_at": "..." }`。
+- **司礼监 → 用户**：收到上奏后整理为简报，输出供用户查看。
+
+### 11.4 用户回复与司礼监回传指令
+
+- **用户 → 司礼监**：用户对报告/简报的回复（文字或结构化指令）。
+- **司礼监**：解析出目标部（单部或多部）与指令内容，向对应部 Agent **回传** `{ "target_ministry": "吏部"|...|["吏部","户部"], "instruction": "..." }`。
+- **各部**：按回传指令执行（更新任务、调整计划等）。
+
+### 11.5 司礼监巡检六部（Heartbeat）
+
+- **触发**：司礼监 Agent 每次 heartbeat。
+- **司礼监**：拉取六部状态（任务阻塞、超时未报、资源异常等，指标可由 `court.inspection` 配置）。若有异常，向用户**上报** `{ "ministry": "...", "anomaly": "描述", "severity": "..." }`，并附**修复方案**（建议处置步骤或指令）；用户可据此回复，司礼监再按 11.4 向该部回传指令。

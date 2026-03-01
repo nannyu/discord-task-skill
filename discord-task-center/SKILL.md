@@ -12,7 +12,8 @@ description: Handles Discord task-center forum: create task posts, archive tasks
 - 用户身处 **Discord 任务中心论坛**的某个帖子（thread）内与你对话；或
 - 用户说 **「新建一个任务」「开个任务：xxx」**；或
 - 用户说 **「归档这个任务」「归档当前任务」**；或
-- 用户要求根据其**任务事项/待办/日历**主动开一个任务帖。
+- 用户要求根据其**任务事项/待办/日历**主动开一个任务帖；或
+- 用户说 **「建六部管理频道」「按六部模板创建频道」「创建明朝六部管理结构」**（见下文「建六部管理频道」一节）。
 
 ## 上下文约定
 
@@ -52,6 +53,19 @@ description: Handles Discord task-center forum: create task posts, archive tasks
 - 使用 **GUILD_FORUM**（论坛频道），建议名称如「任务中心」或 `task-center`。
 - 在频道中预置 **available_tags**：待开始、进行中、已完成、归档、开发、学习、工作、以及若干模型标签（如 gpt-4o、claude-3-5）。
 - 具体 API 与字段见 [reference.md](reference.md)。
+
+---
+
+## 当用户要求「建六部管理频道」「按六部模板创建频道」或「创建明朝六部管理结构」
+
+若用户要求按**明朝六部式**创建整站管理频道结构（仅当你有创建频道权限时）：
+
+1. **读取模板**：从本 skill 的 `templates/six-ministries.json` 读取配置（若用户明确要精简版，则用 `templates/six-ministries-minimal.json`）。模板结构见 [reference.md](reference.md) 第 10 节。
+2. **创建顺序**：**先司礼监 (main)，再六部**（吏→户→礼→兵→刑→工）。每个类别下：先调用 `channelCreate` 创建**类别**（Discord type=4，name 为 category.name），取得返回的频道 ID 作为 `parent_id`；再对该类别下每个 channel 调用 `channelCreate`，传入 `parent_id`、`name`、`type`（0=文本、5=公告、15=论坛），以及 `topic`、`available_tags`（仅论坛需传）。
+3. **使用 discord 工具**：使用 `channelCreate`（需开启 `discord.actions.channels: true`）。若工具一次只能建一个频道，则按上述顺序循环调用，并在回复中汇总新建的类别名与频道链接/ID。
+4. **回复用户**：确认已按六部模板创建完成，并说明「司礼监置顶，其下为六部；工部内含任务中心论坛」。若工具不支持 `parent_id` 或 `available_tags`，则完成能创建的部分后，提示用户在 Discord 后台手动创建类别/子频道或补全标签。**若无法读取模板文件**，请提示用户检查 skill 是否完整安装或提供正确的模板路径（如 `discord-task-center/templates/six-ministries.json`）。
+
+**与「建一个任务管理频道」的区分**：后者只建**一个**任务中心论坛；本处建**整站**司礼监 + 六部结构（含任务中心在内）。
 
 ---
 
