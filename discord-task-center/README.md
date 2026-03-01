@@ -1,13 +1,13 @@
-# Discord Task Center
+# Discord Dynasty
 
-OpenClaw skill：把 Discord 论坛当任务看板用——一帖一任务、用标签管状态/属性/模型/归档，支持新建任务与归档。需配合 [Discord skill](https://clawhub.ai/steipete/discord) 与 `channels.discord` 配置使用。
+OpenClaw skill：明朝六部式 Discord 管理——司礼监+六部频道模板、一帖一任务、上朝/上奏/回传。需配合 [Discord skill](https://clawhub.ai/steipete/discord) 与 `channels.discord` 配置使用。架构借鉴自 [Ai Court](https://clawhub.ai/wanikua/ai-court)。
 
 ## 安装
 
 从 ClawHub 安装（推荐）：
 
 ```bash
-clawhub install discord-task-center
+clawhub install discord-dynasty
 ```
 
 或从本仓库复制 `discord-task-center` 目录到 OpenClaw 工作区的 `skills/discord-task-center/`。
