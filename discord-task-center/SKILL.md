@@ -1,6 +1,6 @@
 ---
 name: discord-task-center
-description: Handles Discord task-center forum: create task posts, archive tasks by tag, and respect model tags for conversation. Use when the user is in a Discord task thread and says 新建任务、开个任务、归档任务、归档当前任务, or when asked to create a task from todo/calendar items. Requires Discord forum task-center integration.
+description: Handles Discord task-center forum: create task posts, archive tasks by tag, and respect model tags. Supports six-ministries style channel template (司礼监+六部). Use when user says 新建任务、开个任务、归档任务、建六部管理频道, or when asked to create a task from todo/calendar. Requires Discord forum integration.
 ---
 
 # Discord 任务中心 (供 OpenClaw Agent 使用)

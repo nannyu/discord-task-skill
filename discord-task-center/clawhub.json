@@ -4,6 +4,6 @@
   "description": "OpenClaw skill：将 Discord 论坛作为任务中心（看板+协作）。支持一帖一 session/任务、状态/属性/模型/归档标签、新建任务与归档；可选明朝六部式管理频道模板（司礼监+吏户礼兵刑工）。与 ClawHub 官方 discord skill 配合使用。",
   "category": "communication",
   "tags": ["discord", "task", "forum", "kanban", "openclaw", "six-ministries", "court"],
-  "version": "1.0.0",
+  "version": "1.1.0",
   "license": "MIT"
 }
